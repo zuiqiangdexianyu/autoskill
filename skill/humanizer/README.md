@@ -1,81 +1,43 @@
-# Humanizer
+# Humanizer（中文版）
 
-A Clawdbot skill that removes signs of AI-generated writing from text, making it sound more natural and human.
+去除中文稿件里的"AI 腔"，让文字读起来像真人写的。是稿件创作流程「精修」阶段的润色技能。
 
-## Installation
+## 用法
 
-Install via ClawdHub:
-
-```bash
-clawdhub install humanizer
-```
-
-## Usage
-
-Ask your agent to humanize text:
+在精修阶段对照 `SKILL.md` 的 20 类中文 AI 腔逐句扫描、改写。也可单独调用：
 
 ```
-Please humanize this text: [your text]
+帮我把这段去一下 AI 腔：[你的文字]
 ```
 
-Or invoke directly when editing documents.
+## 核心思路
 
-## Overview
+判断一句话是不是 AI 腔，只需一个测试：**念出来，真人跟朋友讲这件事会这么说吗？** 不会就改。
 
-Based on [Wikipedia's "Signs of AI writing"](https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing) guide, maintained by WikiProject AI Cleanup. This comprehensive guide comes from observations of thousands of instances of AI-generated text.
+所有毛病都来自三个病根，盯着病根改最有效：
 
-### Key Insight
+- **空**——只给形容词（"强大、卓越、显著"），不给具体的数字、案例、机制。
+- **匀**——每句一样长、每段一样结构，节奏像节拍器。
+- **装**——强行升华、强行排比、强行金句、强行文学化。
 
-> "LLMs use statistical algorithms to guess what should come next. The result tends toward the most statistically likely result that applies to the widest variety of cases."
+> 去掉 AI 词只是一半。删干净了却通篇中性陈述、没有判断和温度的稿子，照样是 AI 腔。
+> 润色要既去套路、又补回作者的判断和真实细节。
 
-## 24 Patterns Detected
+## 收录的 20 类中文 AI 腔
 
-### Content Patterns
-1. **Significance inflation** - "marking a pivotal moment..." → specific facts
-2. **Notability name-dropping** - listing sources without context
-3. **Superficial -ing analyses** - "symbolizing... reflecting..."
-4. **Promotional language** - "nestled within the breathtaking..."
-5. **Vague attributions** - "Experts believe..."
-6. **Formulaic challenges** - "Despite challenges... continues to thrive"
+意义拔高/强行升华、空泛排比三连、"-ing 式"伪分析挂尾、虚假权威/模糊归因、
+AI 高频黑话词、"不是 X 而是 Y"否定平行、自问自答、空洞收尾/万能金句、
+虚拟场景强行引导、过度铺垫开场、机械连接词、加粗滥用、"小标题：内容"行内清单、
+句子节奏单一、强行文学化、空泛形容词堆砌、该有数字处用形容词糊、翻译腔、
+服务腔/对话残留、干净但没灵魂。
 
-### Language Patterns
-7. **AI vocabulary** - "Additionally... testament... landscape..."
-8. **Copula avoidance** - "serves as" instead of "is"
-9. **Negative parallelisms** - "It's not just X, it's Y"
-10. **Rule of three** - forcing ideas into groups of three
-11. **Synonym cycling** - excessive synonym substitution
-12. **False ranges** - "from X to Y" on non-meaningful scales
+每一类都在 `SKILL.md` 里配了中文「病句 → 改写」对照示例。
 
-### Style Patterns
-13. **Em dash overuse**
-14. **Boldface overuse**
-15. **Inline-header lists**
-16. **Title Case Headings**
-17. **Emoji decoration**
-18. **Curly quotation marks**
+## 由来
 
-### Communication Patterns
-19. **Chatbot artifacts** - "I hope this helps!"
-20. **Cutoff disclaimers** - "While details are limited..."
-21. **Sycophantic tone** - "Great question!"
-
-### Filler and Hedging
-22. **Filler phrases** - "In order to", "Due to the fact that"
-23. **Excessive hedging** - "could potentially possibly"
-24. **Generic conclusions** - "The future looks bright"
-
-## Full Example
-
-**Before (AI-sounding):**
-> The new software update serves as a testament to the company's commitment to innovation. Moreover, it provides a seamless, intuitive, and powerful user experience—ensuring that users can accomplish their goals efficiently.
-
-**After (Humanized):**
-> The software update adds batch processing, keyboard shortcuts, and offline mode. Early feedback from beta testers has been positive, with most reporting faster task completion.
-
-## References
-
-- [Wikipedia: Signs of AI writing](https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing)
-- [WikiProject AI Cleanup](https://en.wikipedia.org/wiki/Wikipedia:WikiProject_AI_Cleanup)
+原版基于英文维基 [Signs of AI writing](https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing)，
+其规则与例子均为英文，对中文稿基本无效。本版（v3）整套重写为中文，针对中文自媒体、
+GEO、PR 稿的真实 AI 腔重新归纳，并替换为中文示例。
 
 ## License
 

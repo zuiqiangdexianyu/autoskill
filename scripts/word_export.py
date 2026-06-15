@@ -20,21 +20,24 @@ from typing import List, Optional
 # 当前会话的工作目录（同一对话内的过程文件存在同一目录）
 _SESSION_WORK_DIR = None
 
+# ── 常量 ──────────────────────────────────────────────────
+# 字体名是纯字符串，与 docx 无关；尺寸/颜色常量依赖 docx 类型，放进 try 块，
+# 避免未安装 python-docx 时模块在导入阶段就崩溃（实际导出时再报友好错误）。
+FONT_NAME = "微软雅黑"
+
 try:
     from docx import Document
     from docx.shared import Pt, Inches, Cm, RGBColor
     from docx.enum.text import WD_ALIGN_PARAGRAPH
     from docx.oxml.ns import qn
     HAS_DOCX = True
+    FONT_SIZE = Pt(12)
+    COLOR_BLACK = RGBColor(0x00, 0x00, 0x00)
+    PAGE_WIDTH = Cm(16)  # A4 适中宽度
+    MAX_IMG_WIDTH = Cm(14)
 except ImportError:
     HAS_DOCX = False
-
-# ── 常量 ──────────────────────────────────────────────────
-FONT_NAME = "微软雅黑"
-FONT_SIZE = Pt(12)
-COLOR_BLACK = RGBColor(0x00, 0x00, 0x00)
-PAGE_WIDTH = Cm(16)  # A4 适中宽度
-MAX_IMG_WIDTH = Cm(14)
+    FONT_SIZE = COLOR_BLACK = PAGE_WIDTH = MAX_IMG_WIDTH = None
 
 
 def get_desktop_path() -> str:
