@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>知识库 & 图片库 管理</title>
+<style>
+:root {
+  --bg: #f5f5f5;
+  --card: #fff;
+  --border: #e0e0e0;
+  --text: #333;
+  --muted: #888;
+  --primary: #1976d2;
+  --danger: #d32f2f;
+  --success: #388e3c;
+  --radius: 8px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg); color: var(--text); line-height: 1.5;
+}
+header {
+  background: var(--primary); color: #fff; padding: 12px 24px;
+  display: flex; align-items: center; gap: 16px;
+}
+header h1 { font-size: 18px; font-weight: 600; }
+header .tabs { display: flex; gap: 4px; }
+header .tabs button {
+  background: rgba(255,255,255,.15); color: #fff; border: none;
+  padding: 6px 16px; border-radius: 6px; cursor: pointer; font-size: 14px;
+}
+header .tabs button.active { background: rgba(255,255,255,.35); font-weight: 600; }
+main { max-width: 1200px; margin: 0 auto; padding: 20px; }
+.panel { display: none; }
+.panel.active { display: block; }
+
+/* cards */
+.card { background: var(--card); border-radius: var(--radius); padding: 16px; margin-bottom: 12px; border: 1px solid var(--border); }
+.card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.card-header h3 { font-size: 15px; }
+.row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+
+/* buttons */
+.btn {
+  padding: 6px 14px; border: 1px solid var(--border); border-radius: 6px;
+  cursor: pointer; font-size: 13px; background: #fff; color: var(--text);
+}
+.btn:hover { background: #f0f0f0; }
+.btn.primary { background: var(--primary); color: #fff; border-color: var(--primary); }
+.btn.primary:hover { background: #1565c0; }
+.btn.danger { background: var(--danger); color: #fff; border-color: var(--danger); }
+.btn.small { padding: 3px 10px; font-size: 12px; }
+
+/* inputs */
+input, textarea, select {
+  padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px;
+  font-size: 13px; font-family: inherit;
+}
+input:focus, textarea:focus, select:focus { outline: none; border-color: var(--primary); }
+textarea { width: 100%; min-height: 80px; resize: vertical; }
+select { cursor: pointer; }
+
+/* tags */
+.tag { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+.tag.brand { background: #e3f2fd; color: #1976d2; }
+.tag.competitor { background: #fce4ec; color: #d32f2f; }
+.tag.redline { background: #fff3e0; color: #e65100; }
+.tag.active { background: #e8f5e9; color: #388e3c; }
+.tag.inactive { background: #f5f5f5; color: #9e9e9e; }
+.tag.count { background: #f3e5f5; color: #7b1fa2; }
+
+/* entries list inside kb card */
+.entries { margin-top: 12px; border-top: 1px solid var(--border); padding-top: 8px; }
+.entries .entry { padding: 10px 0; border-bottom: 1px dashed var(--border); }
+.entries .entry:last-child { border-bottom: none; }
+.entries .entry .entry-header strong { font-size: 14px; }
+
+/* image grid */
+.image-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; }
+.image-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.image-card img { width: 100%; height: 140px; object-fit: cover; cursor: pointer; }
+.image-card .meta { padding: 6px 8px; font-size: 11px; color: var(--muted); }
+.image-card.selected { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(25,118,210,.3); }
+
+/* dialog overlay */
+.dialog-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.4);
+  display: flex; align-items: center; justify-content: center; z-index: 100;
+}
+.dialog {
+  background: #fff; border-radius: var(--radius); padding: 24px;
+  min-width: 400px; max-width: 90vw; max-height: 85vh; overflow-y: auto;
+  box-shadow: 0 8px 32px rgba(0,0,0,.2);
+}
+.dialog h2 { margin-bottom: 16px; font-size: 16px; }
+.dialog .actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+.form-group { margin-bottom: 12px; }
+.form-group label { display: block; font-size: 12px; font-weight: 600; color: var(--muted); margin-bottom: 4px; }
+.form-group input, .form-group textarea, .form-group select { width: 100%; }
+
+/* toast */
+.toast {
+  position: fixed; bottom: 20px; right: 20px; padding: 10px 20px;
+  border-radius: 6px; color: #fff; font-size: 13px; z-index: 200;
+  animation: fadeIn .3s;
+}
+.toast.success { background: var(--success); }
+.toast.error { background: var(--danger); }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+.empty { text-align: center; padding: 40px; color: var(--muted); }
+.groups-sidebar { display: flex; gap: 12px; }
+.groups-list { min-width: 200px; }
+.groups-list .group-item {
+  padding: 8px 12px; cursor: pointer; border-radius: 6px; font-size: 13px; margin-bottom: 4px;
+}
+.groups-list .group-item:hover { background: #f0f0f0; }
+.groups-list .group-item.active { background: #e3f2fd; font-weight: 600; }
+.groups-content { flex: 1; }
+
+/* entry editor page */
+.page-header { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; }
+.page-header h2 { font-size: 20px; font-weight: 700; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+.editor-toolbar { display: flex; gap: 4px; margin-bottom: 8px; align-items: center; }
+.editor-toolbar button {
+  padding: 4px 12px; border: 1px solid var(--border); border-radius: 4px;
+  background: #fff; cursor: pointer; font-size: 12px;
+}
+.editor-toolbar button:hover { background: #f0f0f0; }
+.editor-toolbar button.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+
+.editor-pane { min-height: 350px; }
+.editor-pane textarea {
+  width: 100%; min-height: 350px; border: 1px solid var(--border); border-radius: 6px;
+  font-family: Consolas, Monaco, monospace; font-size: 13px; line-height: 1.7;
+  padding: 12px; resize: vertical;
+}
+.editor-pane .rich-editor {
+  width: 100%; min-height: 350px; padding: 12px; border: 1px solid var(--border); border-radius: 6px;
+  font-size: 14px; line-height: 1.8; outline: none; overflow-y: auto;
+}
+.editor-pane .rich-editor:empty:before { content: '在此输入内容...'; color: #ccc; }
+.editor-pane .rich-editor table { border-collapse: collapse; width: 100%; margin: 8px 0; font-size: 13px; }
+.editor-pane .rich-editor th, .editor-pane .rich-editor td { border: 1px solid #d0d0d0; padding: 8px 12px; text-align: left; }
+.editor-pane .rich-editor th { background: #f0f4ff; font-weight: 600; }
+.editor-pane .rich-editor td { background: #fff; }
+.editor-pane .rich-editor tr:nth-child(even) td { background: #fafbfc; }
+.editor-pane .rich-editor pre { background: #f5f5f5; padding: 12px; border-radius: 6px; overflow-x: auto; }
+.editor-pane .rich-editor code { background: #f0f0f0; padding: 2px 6px; border-radius: 3px; font-size: 12px; }
+.editor-pane .rich-editor blockquote { border-left: 3px solid var(--primary); padding-left: 12px; color: #666; margin: 8px 0; }
+.editor-pane .rich-editor hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+.editor-pane .rich-editor img { max-width: 100%; border-radius: 4px; }
+
+/* image preview overlay */
+.preview-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.85);
+  display: flex; align-items: center; justify-content: center; z-index: 200;
+  cursor: zoom-out;
+}
+.preview-overlay img {
+  max-width: 90vw; max-height: 90vh; object-fit: contain;
+  border-radius: 4px; box-shadow: 0 0 40px rgba(0,0,0,.5);
+}
+.preview-overlay .preview-info {
+  position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+  color: #fff; font-size: 13px; background: rgba(0,0,0,.6);
+  padding: 6px 16px; border-radius: 20px;
+}
+.sub-tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+.sub-tabs button {
+  padding: 8px 18px; border: none; background: transparent; cursor: pointer;
+  font-size: 13px; color: var(--muted); border-bottom: 2px solid transparent;
+}
+.sub-tabs button.active { color: var(--primary); font-weight: 600; border-bottom-color: var(--primary); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>📋 知识库 & 图片库</h1>
+  <div class="tabs">
+    <button class="active" data-tab="kb">知识库</button>
+    <button data-tab="images">图片库</button>
+  </div>
+</header>
+
+<main>
+  <!-- ═══════ 知识库面板 ═══════ -->
+  <section id="panel-kb" class="panel active">
+    <!-- 知识库列表页 -->
+    <div id="kb-list-page">
+      <div class="card">
+        <div class="card-header">
+          <h3>知识库列表</h3>
+          <button class="btn primary" onclick="openKbDialog()">+ 新建知识库</button>
+        </div>
+        <div id="kb-list"></div>
+      </div>
+    </div>
+
+    <!-- 条目编辑页（单独的编辑页面） -->
+    <div id="entry-editor-page" style="display:none">
+      <div class="page-header">
+        <button class="btn" onclick="backToKbList()">← 返回知识库</button>
+        <h2 id="editor-page-title">编辑知识条目</h2>
+        <div style="flex:1"></div>
+        <button class="btn primary" onclick="saveEntry()">💾 保存</button>
+      </div>
+
+      <div class="card" style="margin-bottom:16px">
+        <div class="form-row">
+          <div class="form-group">
+            <label>标题</label>
+            <input id="f-edit-title" placeholder="如：品牌概况、竞品_杜蕾斯、写作红线">
+          </div>
+          <div class="form-group">
+            <label>类型</label>
+            <select id="f-edit-type">
+              <option value="brand">品牌/产品信息</option>
+              <option value="competitor">竞品信息</option>
+              <option value="redline">写作红线</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>来源</label>
+            <input id="f-edit-source" placeholder="如：官网、搜狐、内部资料">
+          </div>
+          <div class="form-group">
+            <label>标签（空格或逗号分隔）</label>
+            <input id="f-edit-tags" placeholder="如：物流 航空 时效">
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="editor-toolbar">
+          <span style="font-size:13px;font-weight:600;color:var(--muted);margin-right:8px">内容</span>
+          <button id="btn-switch-md" class="active" onclick="switchEditorMode('markdown')">Markdown</button>
+          <button id="btn-switch-rich" onclick="switchEditorMode('richtext')">富文本</button>
+        </div>
+        <div class="editor-pane" id="pane-markdown">
+          <textarea id="f-edit-content" rows="15" placeholder="输入 Markdown 格式内容..."></textarea>
+        </div>
+        <div class="editor-pane" id="pane-richtext" style="display:none">
+          <div class="rich-editor" id="rich-editor" contenteditable="true"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════ 图片库面板 ═══════ -->
+  <section id="panel-images" class="panel">
+    <div class="groups-sidebar">
+      <div class="groups-list card" style="min-width:200px">
+        <div class="card-header"><h3>分组</h3></div>
+        <div id="group-list"></div>
+        <div style="padding:8px">
+          <button class="btn primary small" onclick="openGroupDialog()" style="width:100%">+ 新建分组</button>
+        </div>
+      </div>
+      <div class="groups-content">
+        <div class="card">
+          <div class="card-header">
+            <h3 id="image-gallery-title">全部图片</h3>
+            <div class="row">
+              <button class="btn small" onclick="openUploadDialog()">上传图片</button>
+              <button class="btn danger small" onclick="bulkDeleteImages()" id="btn-bulk-delete" disabled>批量删除</button>
+              <button class="btn small" id="btn-select-all" onclick="toggleSelectAll()">全选</button>
+            </div>
+          </div>
+          <div id="image-grid" class="image-grid"></div>
+          <div id="image-empty" class="empty" style="display:none">暂无图片</div>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div id="dialog-container"></div>
+
+<script>
+// ═══════════════════════════════════════════ 工具函数 ═══════════════════════════════════════════
+const api = (path, opts = {}) => {
+  const url = path.startsWith('http') ? path : path + (path.includes('?') ? '&' : '?') + '_=' + Date.now();
+  return fetch(url, opts).then(r => r.json()).catch(e => ({ok: false, error: e.message}));
+};
+
+function toast(msg, type = 'success') {
+  const t = document.createElement('div');
+  t.className = 'toast ' + type;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 2500);
+}
+
+function showDialog(title, inner, onSave) {
+  const container = document.getElementById('dialog-container');
+  container.innerHTML = `<div class="dialog-overlay" onclick="if(event.target===this)closeDialog()">
+    <div class="dialog"><h2>${title}</h2>${inner}
+      <div class="actions">
+        <button class="btn" onclick="closeDialog()">取消</button>
+        <button class="btn primary" id="dialog-save-btn">保存</button>
+      </div>
+    </div>
+  </div>`;
+  if (onSave) {
+    document.getElementById('dialog-save-btn').onclick = async () => { await onSave(); closeDialog(); };
+  }
+}
+
+function closeDialog() {
+  document.getElementById('dialog-container').innerHTML = '';
+}
+
+// ═══════════════════════════════════════════ Tab 切换 ═══════════════════════════════════════════
+document.querySelectorAll('header .tabs button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('header .tabs button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    document.getElementById('panel-' + btn.dataset.tab).classList.add('active');
+    if (btn.dataset.tab === 'kb') showKbListPage();
+    if (btn.dataset.tab === 'images') loadImageData();
+  });
+});
+
+// ═══════════════════════════════════════════ Markdown 渲染 ═══════════════════════════════════════
+function mdToHtml(text) {
+  if (!text) return '';
+
+  // 第 1 步：保护代码块，防止后续替换被破坏
+  const codeBlocks = [];
+  let h = text.replace(/```(\w*)\n([\s\S]*?)```/g, (m, lang, code) => {
+    codeBlocks.push(`<pre><code>${esc(code)}</code></pre>`);
+    return `%%CODEBLOCK${codeBlocks.length - 1}%%`;
+  });
+  // 行内代码
+  h = h.replace(/`([^`]+)`/g, (m, code) => {
+    codeBlocks.push(`<code>${esc(code)}</code>`);
+    return `%%CODEBLOCK${codeBlocks.length - 1}%%`;
+  });
+
+  // 第 2 步：转义 HTML
+  h = esc(h);
+
+  // 第 3 步：恢复代码块（HTML 已转义，代码块内容用原始未转义版）
+  h = h.replace(/%%CODEBLOCK(\d+)%%/g, (m, i) => codeBlocks[parseInt(i)]);
+
+  // 第 4 步：块级元素（从大到小）
+  // H1-H4
+  h = h.replace(/^#### (.+)$/gm, '<h4>$1</h4>');
+  h = h.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+  h = h.replace(/^## (.+)$/gm, '<h2>$1</h2>');
+  h = h.replace(/^# (.+)$/gm, '<h1>$1</h1>');
+  // 引用
+  h = h.replace(/^>\s?(.+)$/gm, '<blockquote>$1</blockquote>');
+  // 水平线
+  h = h.replace(/^[-*_]{3,}\s*$/gm, '<hr>');
+  // 无序列表（先收集所有连续行，统一包装）
+  h = h.replace(/(?:^|\n)[ \t]*[-*+]\s(.+)(?:\n[ \t]*[-*+]\s(.+))*$/gm, (m) => {
+    const items = m.trim().split('\n').map(line => {
+      const content = line.replace(/^[ \t]*[-*+]\s/, '');
+      return `<li>${content}</li>`;
+    }).join('');
+    return '\n<ul>' + items + '</ul>\n';
+  });
+  // 有序列表
+  h = h.replace(/(?:^|\n)[ \t]*\d+\.\s(.+)(?:\n[ \t]*\d+\.\s(.+))*$/gm, (m) => {
+    const items = m.trim().split('\n').map(line => {
+      const content = line.replace(/^[ \t]*\d+\.\s/, '');
+      return `<li>${content}</li>`;
+    }).join('');
+    return '\n<ol>' + items + '</ol>\n';
+  });
+
+  // 第 5 步：表格
+  h = h.replace(/^\|(.+)\|\n\|[-| :]+\|\n(\|.+\|\n?)*/gm, (m) => {
+    const rows = m.trim().split('\n');
+    const header = rows[0];
+    const aligns = rows[1];
+    const data = rows.slice(2);
+    let html = '<table><thead><tr>';
+    // 表头
+    header.split('|').filter(c => c.trim()).forEach(c => {
+      html += `<th>${c.trim()}</th>`;
+    });
+    html += '</tr></thead><tbody>';
+    // 数据行
+    data.forEach(row => {
+      if (!row.trim() || !row.includes('|')) return;
+      html += '<tr>';
+      row.split('|').filter(c => c.trim()).forEach(c => {
+        html += `<td>${c.trim()}</td>`;
+      });
+      html += '</tr>';
+    });
+    html += '</tbody></table>';
+    return '\n' + html + '\n';
+  });
+
+  // 第 6 步：行内元素
+  // 图片（先处理，避免与链接冲突）
+  h = h.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" style="max-width:100%">');
+  // 链接
+  h = h.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
+  // 粗体+斜体
+  h = h.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>');
+  h = h.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  h = h.replace(/\*(.+?)\*/g, '<em>$1</em>');
+  // 删除线
+  h = h.replace(/~~(.+?)~~/g, '<del>$1</del>');
+
+  // 第 7 步：段落与换行
+  h = h.replace(/\n\n+/g, '</p><p>');
+  h = h.replace(/\n/g, '<br>');
+  if (!h.startsWith('<')) h = '<p>' + h;
+  if (!h.endsWith('>')) h = h + '</p>';
+
+  // 第 8 步：清理多余的标签嵌套
+  h = h.replace(/<p><\/p>/g, '');
+  h = h.replace(/<br><\/ul>/g, '</ul>');
+  h = h.replace(/<br><\/ol>/g, '</ol>');
+  h = h.replace(/<br><\/h\d>/g, m => m.replace('<br>', ''));
+  h = h.replace(/<br><\/blockquote>/g, '</blockquote>');
+  h = h.replace(/<br><\/table>/g, '</table>');
+  h = h.replace(/<br><\/pre>/g, '</pre>');
+  h = h.replace(/<p><(ul|ol|table|pre|blockquote|hr)>/g, '<$1>');
+  h = h.replace(/(<\/(ul|ol|table|pre|blockquote)>)\s*<\/p>/g, '$1');
+  h = h.replace(/<hr><br>/g, '<hr>');
+
+  return h;
+}
+
+function htmlToMd(html) {
+  if (!html) return '';
+  let d = document.createElement('div'); d.innerHTML = html;
+  return _htmlToMdText(d);
+}
+function _htmlToMdText(n) {
+  if (n.nodeType === 3) return n.textContent;
+  if (n.nodeType !== 1) return '';
+  const tag = n.tagName.toLowerCase();
+  const inner = Array.from(n.childNodes).map(c => _htmlToMdText(c)).join('');
+  switch (tag) {
+    case 'h1': return '# ' + inner + '\n\n';
+    case 'h2': return '## ' + inner + '\n\n';
+    case 'h3': return '### ' + inner + '\n\n';
+    case 'h4': return '#### ' + inner + '\n\n';
+    case 'strong': case 'b': return '**' + inner + '**';
+    case 'em': case 'i': return '*' + inner + '*';
+    case 'code': return '`' + inner + '`';
+    case 'del': return '~~' + inner + '~~';
+    case 'a': return '[' + inner + '](' + (n.getAttribute('href') || '') + ')';
+    case 'img': return '![' + (n.getAttribute('alt') || '') + '](' + (n.getAttribute('src') || '') + ')';
+    case 'blockquote': return '> ' + inner.replace(/\n/g, '\n> ') + '\n\n';
+    case 'hr': return '\n---\n';
+    case 'ul':
+      return Array.from(n.children).map(li => '- ' + _htmlToMdText(li) + '\n').join('') + '\n';
+    case 'ol': {
+      let idx = 1;
+      return Array.from(n.children).map(li => (idx++) + '. ' + _htmlToMdText(li) + '\n').join('') + '\n';
+    }
+    case 'li': return inner;
+    case 'pre': return '```\n' + inner.replace(/<\/?code>/g, '') + '\n```\n\n';
+    case 'table': {
+      const rows = n.querySelectorAll('tr');
+      let md = '\n';
+      rows.forEach((tr, ri) => {
+        const cells = tr.querySelectorAll('th, td');
+        md += '| ' + Array.from(cells).map(c => _htmlToMdText(c).trim()).join(' | ') + ' |\n';
+        if (ri === 0) {
+          md += '| ' + Array.from(cells).map(() => '---').join(' | ') + ' |\n';
+        }
+      });
+      return md + '\n';
+    }
+    case 'br': return '\n';
+    case 'p': return inner + '\n\n';
+    default: return inner;
+  }
+}
+
+// ═══════════════════════════════════════════ 页面导航 ═══════════════════════════════════════════
+function showKbListPage() {
+  document.getElementById('entry-editor-page').style.display = 'none';
+  document.getElementById('kb-list-page').style.display = 'block';
+  loadKbList();
+}
+
+function showEntryEditor(isNew, kbId, entryData) {
+  document.getElementById('kb-list-page').style.display = 'none';
+  document.getElementById('entry-editor-page').style.display = 'block';
+  document.getElementById('editor-page-title').textContent = isNew ? '新建知识条目' : '编辑知识条目';
+  document.getElementById('f-edit-title').value = entryData ? entryData.title : '';
+  document.getElementById('f-edit-type').value = entryData ? (entryData.entry_type || 'brand') : 'brand';
+  document.getElementById('f-edit-source').value = entryData ? (entryData.source || '') : '';
+  document.getElementById('f-edit-tags').value = entryData ? (Array.isArray(entryData.tags) ? entryData.tags.join(' ') : entryData.tags || '') : '';
+  document.getElementById('f-edit-content').value = entryData ? (entryData.content || '') : '';
+  document.getElementById('rich-editor').innerHTML = entryData ? mdToHtml(entryData.content || '') : '';
+  _editingEntryId = isNew ? null : entryData.id;
+  _editingKbId = kbId;
+  _editorMode = 'richtext';
+  document.getElementById('btn-switch-md').className = '';
+  document.getElementById('btn-switch-rich').className = 'active';
+  document.getElementById('pane-markdown').style.display = 'none';
+  document.getElementById('pane-richtext').style.display = 'block';
+}
+
+function backToKbList() {
+  showKbListPage();
+}
+
+let _editingEntryId = null;
+let _editingKbId = null;
+let _editorMode = 'markdown';
+
+// ═══════════════════════════════════════════ 编辑器模式切换 ═══════════════════════════════════════
+function switchEditorMode(mode) {
+  _editorMode = mode;
+  document.getElementById('btn-switch-md').className = mode === 'markdown' ? 'active' : '';
+  document.getElementById('btn-switch-rich').className = mode === 'richtext' ? 'active' : '';
+  document.getElementById('pane-markdown').style.display = mode === 'markdown' ? 'block' : 'none';
+  document.getElementById('pane-richtext').style.display = mode === 'richtext' ? 'block' : 'none';
+  if (mode === 'richtext') {
+    const md = document.getElementById('f-edit-content').value;
+    document.getElementById('rich-editor').innerHTML = mdToHtml(md);
+  } else {
+    const html = document.getElementById('rich-editor').innerHTML;
+    document.getElementById('f-edit-content').value = htmlToMd(html);
+  }
+}
+
+// ═══════════════════════════════════════════ 保存条目 ═══════════════════════════════════════════
+async function saveEntry() {
+  const title = document.getElementById('f-edit-title').value.trim();
+  const etype = document.getElementById('f-edit-type').value;
+  const source = document.getElementById('f-edit-source').value.trim();
+  const tagsStr = document.getElementById('f-edit-tags').value.trim();
+  let content;
+  if (_editorMode === 'richtext') {
+    content = htmlToMd(document.getElementById('rich-editor').innerHTML).trim();
+  } else {
+    content = document.getElementById('f-edit-content').value.trim();
+  }
+  if (!title) { toast('请填写标题', 'error'); return; }
+  if (!content) { toast('请填写内容', 'error'); return; }
+
+  const tags = tagsStr ? tagsStr.split(/[,，\s]+/).filter(Boolean) : [];
+
+  if (_editingEntryId) {
+    const resp = await api('/api/knowledge/entries/update', {
+      method: 'POST', body: JSON.stringify({ entry_id: _editingEntryId, title, entry_type: etype, source, tags, content }),
+    });
+    if (resp.ok) { toast('已保存'); backToKbList(); }
+    else { toast('保存失败: ' + (resp.error || ''), 'error'); }
+  } else {
+    const resp = await api('/api/knowledge/entries/create', {
+      method: 'POST', body: JSON.stringify({ kb_id: _editingKbId, title, entry_type: etype, source, tags, content }),
+    });
+    if (resp.ok) { toast('已创建'); backToKbList(); }
+    else { toast('创建失败: ' + (resp.error || ''), 'error'); }
+  }
+}
+
+// ═══════════════════════════════════════════ 知识库 ═══════════════════════════════════════════
+let _kbFilter = 'all'; // all | active | inactive
+
+async function loadKbList() {
+  const data = await api('/api/knowledge/bases');
+  const list = document.getElementById('kb-list');
+  if (!data.ok || !data.knowledge_bases?.length) {
+    list.innerHTML = '<div class="empty">暂无知识库，点击上方按钮创建一个</div>';
+    return;
+  }
+  const items = data.knowledge_bases;
+  // 过滤
+  const filtered = items.filter(kb => {
+    if (_kbFilter === 'active') return kb.is_active;
+    if (_kbFilter === 'inactive') return !kb.is_active;
+    return true;
+  });
+
+  const allCount = items.length;
+  const activeCount = items.filter(k => k.is_active).length;
+  const inactiveCount = items.filter(k => !k.is_active).length;
+
+  list.innerHTML = `
+    <div class="sub-tabs">
+      <button class="${_kbFilter === 'all' ? 'active' : ''}" onclick="_kbFilter='all';loadKbList()">全部 (${allCount})</button>
+      <button class="${_kbFilter === 'active' ? 'active' : ''}" onclick="_kbFilter='active';loadKbList()">已启用 (${activeCount})</button>
+      <button class="${_kbFilter === 'inactive' ? 'active' : ''}" onclick="_kbFilter='inactive';loadKbList()">已停用 (${inactiveCount})</button>
+    </div>
+    ${filtered.map(kb => `
+    <div class="card" style="opacity:${kb.is_active ? 1 : 0.6}">
+      <div class="card-header">
+        <h3>${esc(kb.name)} &nbsp;
+          <span class="tag ${kb.is_active ? 'active' : 'inactive'}">${kb.is_active ? '已激活' : '已停用'}</span>
+          <span class="tag count">${kb.entry_count} 条</span>
+        </h3>
+        <div class="row">
+          <button class="btn small" onclick="toggleKb(${kb.id}, ${kb.is_active})">${kb.is_active ? '停用' : '激活'}</button>
+          <button class="btn small" onclick="openKbDialog(${kb.id}, '${esc(kb.name)}')">编辑</button>
+          <button class="btn small" onclick="openCreateEntry(${kb.id})">+ 条目</button>
+          <button class="btn danger small" onclick="deleteKb(${kb.id})">删除</button>
+        </div>
+      </div>
+      ${kb.entry_count > 0
+        ? `<button class="btn small" style="margin-top:4px" onclick="toggleEntries(this, ${kb.id})">展开条目 ▼</button>
+           <div class="entries" id="entries-${kb.id}" style="display:none"></div>`
+        : '<div style="font-size:12px;color:var(--muted);margin-top:4px">暂无条目</div>'}
+    </div>`).join('')}
+`;
+}
+
+async function toggleEntries(btn, kbId) {
+  const div = document.getElementById('entries-' + kbId);
+  if (div.style.display === 'none') {
+    btn.textContent = '收起 ▲'; div.style.display = 'block';
+    if (!div.dataset.loaded) {
+      const data = await api('/api/knowledge/entries/list?kb_id=' + kbId);
+      div.innerHTML = (data.entries || []).map(e => {
+        const typeLabel = {brand:'品牌/产品信息', competitor:'竞品信息', redline:'写作红线'}[e.entry_type] || e.entry_type;
+        const tagHtml = Array.isArray(e.tags) ? e.tags.map(t => `<span class="tag ${e.entry_type}" style="margin-left:4px">${esc(t)}</span>`).join('') : '';
+        return `<div class="entry">
+          <div class="entry-header">
+            <span class="tag ${e.entry_type}">${typeLabel}</span>
+            <strong style="margin-left:6px">${esc(e.title)}</strong>
+            ${e.source ? `<span style="font-size:11px;color:var(--muted);margin-left:8px">来源: ${esc(e.source)}</span>` : ''}
+            ${tagHtml}
+            <span style="float:right">
+              <button class="btn small" onclick="openEditEntry(${kbId}, ${e.id})">编辑</button>
+              <button class="btn small danger" onclick="deleteEntry(${kbId}, ${e.id})">删除</button>
+            </span>
+          </div>
+          <div style="font-size:12px;color:#666;margin-top:4px;white-space:pre-wrap;max-height:60px;overflow:hidden">${esc((e.content||'').substring(0,200))}${(e.content||'').length>200?'...':''}</div>
+        </div>`;
+      }).join('') || '<div class="empty">无条目</div>';
+      div.dataset.loaded = '1';
+    }
+  } else {
+    btn.textContent = '展开条目 ▼'; div.style.display = 'none';
+  }
+}
+
+function openKbDialog(id, name) {
+  showDialog(id ? '编辑知识库' : '新建知识库', `<div class="form-group"><label>名称</label><input id="f-kb-name" value="${esc(name||'')}"></div>`, async () => {
+    const n = document.getElementById('f-kb-name').value.trim();
+    if (!n) { toast('名称不能为空', 'error'); return; }
+    if (id) await api('/api/knowledge/bases/update', {method:'POST',body:JSON.stringify({kb_id:id,name:n})});
+    else await api('/api/knowledge/bases/create', {method:'POST',body:JSON.stringify({name:n})});
+    toast(id ? '已更新' : '已创建'); loadKbList();
+  });
+}
+
+async function deleteKb(id) {
+  if (!confirm('确定删除此知识库及全部条目？')) return;
+  await api('/api/knowledge/bases/delete', {method:'POST',body:JSON.stringify({kb_id:id})});
+  toast('已删除'); loadKbList();
+}
+
+async function toggleKb(id, active) {
+  await api('/api/knowledge/bases/toggle', {method:'POST',body:JSON.stringify({kb_id:id,is_active:!active})});
+  toast(active ? '已停用' : '已激活'); loadKbList();
+}
+
+// ═══════════════════════════════════════════ 条目操作 ═══════════════════════════════════════════
+function openCreateEntry(kbId) {
+  showEntryEditor(true, kbId, null);
+}
+
+async function openEditEntry(kbId, entryId) {
+  const data = await api('/api/knowledge/entry/detail?id=' + entryId);
+  if (data.ok) {
+    showEntryEditor(false, kbId, data.entry);
+  } else {
+    toast('加载条目失败', 'error');
+  }
+}
+
+async function deleteEntry(kbId, entryId) {
+  if (!confirm('确定删除此条目？')) return;
+  const resp = await api('/api/knowledge/entries/delete', {method:'POST',body:JSON.stringify({entry_id:entryId})});
+  if (resp.ok) { toast('已删除'); loadKbList(); }
+  else { toast('删除失败', 'error'); }
+}
+
+// ═══════════════════════════════════════════ 图片库 ═══════════════════════════════════════════
+let selectedImageIds = new Set();
+let currentGroupId = null;
+
+async function loadImageData() { await loadGroups(); await loadImages(); }
+
+async function loadGroups() {
+  const data = await api('/api/images/groups');
+  const div = document.getElementById('group-list');
+  if (!data.ok || !data.groups?.length) { div.innerHTML = '<div style="padding:8px;font-size:12px;color:var(--muted)">暂无分组</div>'; return; }
+  div.innerHTML = data.groups.map(g => `
+    <div class="group-item${g.id===currentGroupId?' active':''}" onclick="selectGroup(${g.id},'${esc(g.name)}')">
+      ${esc(g.name)} <span class="tag count">${g.image_count}</span>
+      <span style="float:right;font-size:11px;color:var(--danger);cursor:pointer;margin-left:8px" onclick="event.stopPropagation();deleteImageGroup(${g.id},'${esc(g.name)}')">✕</span>
+    </div>
+  `).join('');
+}
+
+async function loadImages() {
+  selectedImageIds.clear(); updateBulkDeleteBtn();
+  const qs = currentGroupId ? '?group_id=' + currentGroupId : '';
+  const data = await api('/api/images/list' + qs);
+  const grid = document.getElementById('image-grid');
+  const empty = document.getElementById('image-empty');
+  if (!data.images?.length) { grid.innerHTML = ''; empty.style.display = 'block'; return; }
+  empty.style.display = 'none';
+  grid.innerHTML = data.images.map(img => `
+    <div class="image-card${selectedImageIds.has(img.id)?' selected':''}" data-id="${img.id}">
+      <div style="position:relative">
+        <img src="${esc(img.thumb_url||img.url)}" loading="lazy" style="cursor:pointer" onclick="previewImage('${esc(img.url)}', '${esc(img.filename||'')}', ${img.width}, ${img.height})" onerror="this.src='data:image/svg+xml,...'">
+        <input type="checkbox" style="position:absolute;top:4px;left:4px;width:16px;height:16px;cursor:pointer" onclick="event.stopPropagation();toggleImage(${img.id}, this.parentElement.parentElement)" ${selectedImageIds.has(img.id)?'checked':''}>
+      </div>
+      <div class="meta">${esc(img.filename||'')}<br>${formatSize(img.file_size)} ${img.width}x${img.height}</div>
+    </div>
+  `).join('');
+}
+
+function selectGroup(gid, gname) {
+  currentGroupId = gid;
+  loadGroups(); loadImages();
+  document.getElementById('image-gallery-title').textContent = gname || '图片列表';
+}
+
+function previewImage(url, filename, w, h) {
+  const div = document.createElement('div');
+  div.className = 'preview-overlay';
+  div.onclick = () => div.remove();
+  div.innerHTML = `<img src="${url}" alt="${esc(filename)}"><div class="preview-info">${esc(filename)} — ${w}×${h}</div>`;
+  document.body.appendChild(div);
+}
+
+function toggleImage(id, el) { selectedImageIds.has(id) ? (selectedImageIds.delete(id), el.classList.remove('selected')) : (selectedImageIds.add(id), el.classList.add('selected')); updateBulkDeleteBtn(); }
+function toggleSelectAll() { const c = document.querySelectorAll('.image-card'); selectedImageIds.size===c.length ? (selectedImageIds.clear(), c.forEach(x=>x.classList.remove('selected'))) : (c.forEach(x=>{selectedImageIds.add(+x.dataset.id);x.classList.add('selected')})); updateBulkDeleteBtn(); }
+function updateBulkDeleteBtn() { const btn = document.getElementById('btn-bulk-delete'); btn.disabled = selectedImageIds.size===0; btn.textContent = selectedImageIds.size>0 ? `批量删除(${selectedImageIds.size})` : '批量删除'; }
+async function bulkDeleteImages() {
+  if (selectedImageIds.size===0) return; if (!confirm(`确定删除 ${selectedImageIds.size} 张图片？`)) return;
+  await api('/api/images/bulk-delete', {method:'POST',body:JSON.stringify({item_ids:[...selectedImageIds]})}); toast('已删除'); loadImageData();
+}
+
+async function deleteImageGroup(id, name) {
+  if (!confirm(`确定删除分组「${name}」及其中全部图片？`)) return;
+  const r = await api('/api/images/groups/delete', {method:'POST',body:JSON.stringify({group_id:id})});
+  if (r.ok) { toast('已删除'); loadImageData(); }
+  else { toast('删除失败', 'error'); }
+}
+
+function openGroupDialog(id, name, desc) {
+  showDialog(id?'编辑分组':'新建分组', `<div class="form-group"><label>名称</label><input id="f-group-name" value="${esc(name||'')}"></div><div class="form-group"><label>描述</label><input id="f-group-desc" value="${esc(desc||'')}"></div>`, async () => {
+    const n = document.getElementById('f-group-name').value.trim(), d = document.getElementById('f-group-desc').value.trim();
+    if (!n) { toast('名称不能为空','error'); return; }
+    if (id) await api('/api/images/groups/update',{method:'POST',body:JSON.stringify({group_id:id,name:n,description:d})});
+    else await api('/api/images/groups/create',{method:'POST',body:JSON.stringify({name:n,description:d})});
+    toast(id?'已更新':'已创建'); loadImageData();
+  });
+}
+
+function openUploadDialog() {
+  const gid = currentGroupId || '';
+  const gname = currentGroupId ? (document.querySelector('.group-item.active')?.textContent?.trim() || ('分组'+currentGroupId)) : '未选择';
+  showDialog('上传图片', `<div class="form-group"><label>上传到分组</label><input id="f-upload-group" value="${gid}" type="hidden"><span style="padding:6px 12px;background:#f0f4ff;border-radius:6px;font-weight:600">${esc(gname)}</span></div><div class="form-group"><label>选择文件</label><input type="file" id="f-upload-files" multiple accept="image/*"></div>`, async () => {
+    const files = document.getElementById('f-upload-files').files, groupId = +document.getElementById('f-upload-group').value || currentGroupId;
+    if (!files.length) { toast('请选择文件','error'); return; }
+    if (!groupId) { toast('请指定分组','error'); return; }
+    const form = new FormData(); form.append('group_id', groupId);
+    for (const f of files) form.append('files', f);
+    const resp = await fetch('/api/images/upload',{method:'POST',body:form});
+    const data = await resp.json();
+    const ok = data.results?.filter(r=>r.ok).length||0;
+    toast(`成功 ${ok}/${data.total||files.length}`); loadImageData();
+  });
+}
+
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function formatSize(b) { if (!b) return ''; return b>1e6?(b/1e6).toFixed(1)+'MB':(b/1024).toFixed(0)+'KB'; }
+
+// 初始化
+loadKbList();
+</script>
+</body>
+</html>
