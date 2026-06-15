@@ -323,11 +323,22 @@ def _find_paragraph_breaks(body: str) -> list:
 
 
 def _image2_position(body: str, breaks: list) -> int:
-    if len(breaks) < 3:
-        return breaks[-1][0]
-    pre_last = body[breaks[-3][1]:breaks[-2][0]].strip()
-    if re.match(r'^#{1,3}\s+\*?\*?', pre_last):
-        return breaks[-3][0]
+    """Find position for the second image: before the LAST H2 heading if one exists
+    in the final section, otherwise before the last paragraph break.
+
+    Scans backwards through breaks; the text after each break (up to the next break
+    or end of body) is checked for an H2/H3 heading pattern. First match wins.
+    """
+    if len(breaks) < 2:
+        return len(body)
+    # Scan backwards: for each break, check if the text immediately after it is a heading
+    for i in range(len(breaks) - 1, -1, -1):
+        seg_start = breaks[i][1]
+        seg_end = breaks[i + 1][0] if i + 1 < len(breaks) else len(body)
+        segment = body[seg_start:seg_end].strip()
+        if re.match(r'^#{1,3}\s', segment):
+            return breaks[i][0]
+    # No heading found — fall back to last break
     return breaks[-1][0]
 
 
