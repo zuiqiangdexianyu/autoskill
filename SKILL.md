@@ -105,7 +105,7 @@ description: "中文稿件创作系统，支持自媒体（深度观点）和 GE
 **直接在对话里写。禁止写任何 .py 脚本来"生成"正文。**
 动笔前再读一遍风格文件的 `tone_rules` 和 `structure_template`，严格按规则写。
 
-**标题**：生成 **3 个正式标题**（都正式，不分主备）。每个 ≤ 风格的 `title_max_length` 字，不用风格 `title_forbidden_punctuation` 里的标点，含核心关键词，有"为什么/怎么做到"的钩子。
+**标题**：生成 **3 个正式标题**（都正式，不分主备）。每个 ≤ 风格的 `title_max_length` 字，不用风格 `title_forbidden_punctuation` 里的标点，有"为什么/怎么做到"的钩子。**3 个标题每一个都必须包含核心关键词（如"跨越速运"），不是只有一个含。**
 
 **开头**（决定 70% 读完率）：第一句必须是具体场景 / 反常识事实 / 真实痛点。场景须是真实案例或明确的设想（如"假设你要寄一件……"），**不得伪造第一人称经历或客户案例**。**严禁** `style_definitions.FORBIDDEN_OPENINGS` 里的任何开场。
 
@@ -128,6 +128,8 @@ body = result["body"]                    # 返回 dict，body 字段已含图片
 # 短文(<800字)插1张，长文(≥800字)插2张
 # 第1张：第一段之后；第2张：最后一个 H2 小标题之前（避免图片夹在小标题和正文之间）
 ```
+**配图后核对张数**：数一下 `body` 里 `![](...)` 的数量，长文(≥800字)必须是 **2 张**、短文 1 张。
+若不足（多因匹配的分组图片不够），用 `it.list_images(group_id=...)` 看分组里有几张，**换一个图够的分组或多传一个 `group_ids`**，把张数补够，不要将就只放 1 张。导出时也只删真正失效（localhost/本地不存在）的图，别误删有效图。
 
 ### 第 5 步 · 精修（Polish）—— 把稿子从"能看"改到"好"
 
@@ -161,14 +163,16 @@ r = banned_words.check_banned_words(标题+正文)   # r.safe / r.hits
 ### 第 6 步 · 导出（Export）
 
 1. **清理图片**：正文里所有 `![](url)`，凡是指向 localhost 或本地不存在的图片行，从 body 删掉，避免导出卡在图片下载。
-2. **导出 Word 到桌面**（不要存 .md）：
+2. **只导出一份最终稿到桌面**（不要存 .md）：
    ```python
    from word_export import save_article_to_downloads
    save_article_to_downloads(titles=["标题1","标题2","标题3"], body=body,
                              style_name="自媒体", topic="跨越速运")
    # → 桌面/跨越速运_20260615_1430.docx
    ```
-3. 用 `deliver_attachments` 把 .docx 交付给用户。
+   **`save_article_to_downloads()` 整个流程只在这一步调用一次，桌面上只能有一份最终 .docx。**
+   过程稿/草稿一律用 `save_process_md()` 存成 .md 到会话工作目录，**绝不把草稿或过程版另存成 .docx 到桌面**（避免桌面出现两份 docx）。
+3. 用 `deliver_attachments` 把这一份最终 .docx 交付给用户。
 4. 向用户展示：3 个标题 + 正文 + 精修摘要（评分+改了什么）+ 字数 + 配图情况 + Word 附件。**中间过程（查库、评分细节）不在对话里刷屏。**
 
 ---
@@ -239,9 +243,9 @@ save_article_to_downloads(...);  save_batch_as_zip(...)
 ## 六、路径与禁止行为
 
 1. **不写 Python 脚本来生成正文**——正文直接写在对话里，不建 `write_article.py`、`validate_*.py` 等任何 .py。
-2. **中间产物走 `save_process_md()`**，存到会话工作区；导出后自动清理，不留中间文件。
+2. **中间产物走 `save_process_md()`**（存成 .md 到会话工作区），导出后自动清理，不留中间文件。
 3. **不在 scripts/ 或工作路径下手动建任何文件**。
-4. **最终输出必须是 .docx**，不存 .md。
+4. **桌面只留一份最终 .docx**：`save_article_to_downloads()` 全流程只调一次；不存 .md，更不要把草稿/过程版另存成 .docx 到桌面，避免桌面出现两份。
 5. **对话里只给最终结果**——查库、评分、字数检查这些在内部做，不刷屏。
 
 ---
