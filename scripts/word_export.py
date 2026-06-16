@@ -234,8 +234,12 @@ def _add_markdown_to_doc(doc, body):
                 except Exception:
                     pass
                 finally:
+                    # 只删除我们自己下载到临时目录的文件；绝不删图片库里的原图/缩略图
+                    # （历史 bug：这里曾无条件 os.remove，把图库原图导一次删一次）
                     try:
-                        if img_file and os.path.isfile(img_file):
+                        tmpdir = os.path.abspath(tempfile.gettempdir())
+                        if img_file and os.path.isfile(img_file) \
+                                and os.path.abspath(img_file).startswith(tmpdir + os.sep):
                             os.remove(img_file)
                     except Exception:
                         pass
