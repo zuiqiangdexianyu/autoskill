@@ -157,14 +157,22 @@ r = banned_words.check_banned_words(标题+正文)   # r.safe / r.hits
 - AI 黑话：对照 `style_definitions.AI_JARGON` 扫，命中就换。
 - 禁用开场：对照 `style_definitions.FORBIDDEN_OPENINGS` 查开头。
 - 占位符：搜 `[待补充]`、`[XXX]` 等未替换内容。
-- 字数：确认落在风格区间内。
+- 字数：**必须落在 `word_count_min`–`word_count_max` 内，超出上限就精简到范围内，一个字都不能超**（自媒体上限 1200，GEO 上限 2500）。
 - 红线：重点复查有没有触碰第 2 步的红线条目。
 
 改完任何一处后，回到 A 重新过一遍；2 轮后即便仍有小瑕疵也停手交付，不要无限打磨。
 
 ### 第 6 步 · 导出（Export）
 
-1. **图片**：导出会自动下载并嵌入正文里的 `![](url)` 图片（含本地 `localhost` 服务的图，带 10 秒超时），**不要再因为是 localhost 就删图**；只删除确认彻底打不开的失效图片行。长文应保留 2 张。
+1. **图片核对（导出前必做，别删图）**：
+   ```python
+   from word_export import verify_article_images
+   checks = verify_article_images(body)   # 每张: {"url","ok","via": local/thumb/download/none}
+   ```
+   - **严禁用正则批量删除图片行**（如 `re.sub(r'!\[.*?\]\(.*?\)','',body)`）——这会把已插好的图全删光，导出零图。
+   - 逐张看：`ok=True` 的全部保留（导出会自动嵌入，含 localhost 图与 thumbs 缩略图回退）。
+   - 只有 `ok=False`（`via=none`，文件确实不存在又下载不到）才处理那**一行**：优先换一个图片文件齐全的分组重新配图、或补一张可用图，**补不回来才删那一行**。
+   - 原本该有图（长文 2 张）就不能让它变成 0 张。
 2. **只导出一份最终稿到桌面**（不要存 .md）：
    ```python
    from word_export import save_article_to_downloads

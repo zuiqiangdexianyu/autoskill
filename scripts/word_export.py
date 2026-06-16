@@ -139,6 +139,29 @@ def _resolve_image(img_url: str) -> Optional[str]:
     return None
 
 
+def verify_article_images(body: str) -> List[dict]:
+    """插图后、导出前核对正文里每张图能否被解析到真实文件/可下载。
+
+    返回 [{"url":..., "ok":True/False, "via":"local|thumb|download|none"}]。
+    用法：导出前调用，若有 ok=False 的图，说明该图会丢失，应换分组/补图后再导，
+    不要直接把图片行删掉了事。
+    """
+    out = []
+    skill_root = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
+    for u in re.findall(r"!\[.*?\]\((.*?)\)", body):
+        via = "none"
+        if os.path.isfile(u):
+            via = "local"
+        elif os.path.isfile(os.path.join(skill_root, "scripts", "images", os.path.basename(u))):
+            via = "local"
+        elif os.path.isfile(os.path.join(skill_root, "scripts", "images", "thumbs", os.path.basename(u))):
+            via = "thumb"
+        elif u.startswith(("http://", "https://")):
+            via = "download"
+        out.append({"url": u, "ok": via != "none", "via": via})
+    return out
+
+
 def _add_markdown_to_doc(doc, body):
     """将 Markdown 正文逐行解析写入 Word（纯 12pt 黑色微软雅黑）。"""
     lines = body.split("\n")
