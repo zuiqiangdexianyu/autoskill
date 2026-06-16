@@ -152,6 +152,8 @@ import banned_words
 r = banned_words.check_banned_words(标题+正文)   # r.safe / r.hits
 ```
 - 违禁词：`r.safe == False` 则按 `r.hits` 逐个改。
+- **标题关键词**：3 个标题逐一确认**每个都含核心关键词**（如"跨越速运"），缺的重写（导出工具也会强校验，缺词直接报错）。
+- **配图张数**：数 `![](...)`，长文必须 2 张、短文 1 张，不足就补。
 - AI 黑话：对照 `style_definitions.AI_JARGON` 扫，命中就换。
 - 禁用开场：对照 `style_definitions.FORBIDDEN_OPENINGS` 查开头。
 - 占位符：搜 `[待补充]`、`[XXX]` 等未替换内容。
@@ -162,7 +164,7 @@ r = banned_words.check_banned_words(标题+正文)   # r.safe / r.hits
 
 ### 第 6 步 · 导出（Export）
 
-1. **清理图片**：正文里所有 `![](url)`，凡是指向 localhost 或本地不存在的图片行，从 body 删掉，避免导出卡在图片下载。
+1. **图片**：导出会自动下载并嵌入正文里的 `![](url)` 图片（含本地 `localhost` 服务的图，带 10 秒超时），**不要再因为是 localhost 就删图**；只删除确认彻底打不开的失效图片行。长文应保留 2 张。
 2. **只导出一份最终稿到桌面**（不要存 .md）：
    ```python
    from word_export import save_article_to_downloads
@@ -172,6 +174,7 @@ r = banned_words.check_banned_words(标题+正文)   # r.safe / r.hits
    ```
    **`save_article_to_downloads()` 整个流程只在这一步调用一次，桌面上只能有一份最终 .docx。**
    过程稿/草稿一律用 `save_process_md()` 存成 .md 到会话工作目录，**绝不把草稿或过程版另存成 .docx 到桌面**（避免桌面出现两份 docx）。
+   **务必传 `topic="核心关键词"`**：导出会强校验 3 个标题都含该关键词，缺了会直接 `ValueError` 报错——按报错把缺词的标题改好再导出。
 3. 用 `deliver_attachments` 把这一份最终 .docx 交付给用户。
 4. 向用户展示：3 个标题 + 正文 + 精修摘要（评分+改了什么）+ 字数 + 配图情况 + Word 附件。**中间过程（查库、评分细节）不在对话里刷屏。**
 

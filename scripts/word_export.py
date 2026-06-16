@@ -124,12 +124,15 @@ def _resolve_image(img_url: str) -> Optional[str]:
     ]:
         if os.path.isfile(c):
             return c
-    # 3. 非 localhost 的 HTTP 链接才尝试下载（带超时）
-    if img_url.startswith(("http://", "https://")) and "localhost" not in img_url and "127.0.0.1" not in img_url:
+    # 3. HTTP(S) 链接尝试下载（含 localhost——本地图片库 server 通常就跑在 localhost，
+    #    在用户机器上是可达的；用超时避免 server 没起时卡住）
+    if img_url.startswith(("http://", "https://")):
         try:
-            ext = os.path.splitext(img_url)[1] or ".jpg"
+            ext = os.path.splitext(img_url)[1].split("?")[0] or ".jpg"
             tmp = tempfile.NamedTemporaryFile(delete=False, suffix=ext)
-            urllib.request.urlretrieve(img_url, tmp.name)
+            with urllib.request.urlopen(img_url, timeout=10) as resp:
+                tmp.write(resp.read())
+            tmp.close()
             return tmp.name
         except Exception:
             return None
@@ -278,6 +281,13 @@ def _safe_filename(text: str, max_len: int = 40) -> str:
     return safe[:max_len]
 
 
+def check_titles_keyword(titles: List[str], keyword: str) -> List[str]:
+    """返回不包含关键词的标题列表（用于强校验）。"""
+    if not keyword:
+        return []
+    return [t for t in titles if keyword not in t]
+
+
 def save_article_to_downloads(
     titles: List[str],
     body: str,
@@ -285,7 +295,17 @@ def save_article_to_downloads(
     topic: str = "",
     folder: str = "",
 ) -> str:
-    """保存稿件到桌面（默认），文件名自动生成。"""
+    """保存稿件到桌面（默认），文件名自动生成。
+
+    导出前强校验：若传了 topic（核心关键词），3 个标题必须每个都包含它，
+    否则抛出 ValueError——这是硬性要求，请把缺关键词的标题改了再导出。
+    """
+    missing = check_titles_keyword(titles, topic)
+    if missing:
+        raise ValueError(
+            f"以下标题缺少核心关键词「{topic}」，必须每个标题都含该词，改完再导出：\n  - "
+            + "\n  - ".join(missing)
+        )
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
     safe_topic = re.sub(r'[\\/:*?"<>|]', "_", (topic or "稿件")[:20])
     fname = f"{safe_topic}_{ts}.docx"
