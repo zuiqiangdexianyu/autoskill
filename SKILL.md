@@ -91,7 +91,7 @@ description: "中文稿件创作系统，支持自媒体（深度观点）和 GE
 
 ### 第 3 步 · 搭架（Structure）—— 决定稿子是不是"流水账"
 
-**先读风格文件**：`style/` 下对应风格的 `.py` 文件里有 `structure_template`（结构骨架）、各类范例和红线，照着搭。
+**先读风格文件**：`style/` 下对应风格的 `.py` 文件里有 `tone_rules`（写作红线）、`structure_template`（结构骨架）等规则，照着搭。
 
 搭架做三件事：
 1. **选结构**：照风格文件的 `structure_template` 选一个骨架，但要让它适配你的核心信息——不要无脑套"背景→优点→总结"。
@@ -103,9 +103,9 @@ description: "中文稿件创作系统，支持自媒体（深度观点）和 GE
 ### 第 4 步 · 起草（Draft）—— 最见功夫
 
 **直接在对话里写。禁止写任何 .py 脚本来"生成"正文。**
-动笔前再扫一眼风格文件里的 `opening_examples` / `good_vs_bad_paragraph` / `ending_examples`，照着那个**质感**写，不只是照规则写。
+动笔前再读一遍风格文件的 `tone_rules` 和 `structure_template`，严格按规则写。
 
-**标题**：生成 **3 个正式标题**（都正式，不分主备）。每个 ≤ 风格的 `title_max_length` 字，不用风格 `title_forbidden_punctuation` 里的标点，含核心关键词，有"为什么/怎么做到"的钩子。照风格文件 `title_examples` 的好坏对照写。
+**标题**：生成 **3 个正式标题**（都正式，不分主备）。每个 ≤ 风格的 `title_max_length` 字，不用风格 `title_forbidden_punctuation` 里的标点，含核心关键词，有"为什么/怎么做到"的钩子。
 
 **开头**（决定 70% 读完率）：第一句必须是具体场景 / 反常识事实 / 真实痛点。**严禁** `style_definitions.FORBIDDEN_OPENINGS` 里的任何开场。
 
@@ -226,7 +226,7 @@ banned_words.check_banned_words(全文)   # → .safe / .hits / .summary
 # 6 类: 绝对化用语 / 医疗违规 / 金融违规 / 引流诱导 / 虚假宣传 / 敏感话题
 
 # 风格 (from style_definitions import ...)
-get_style("zimeiti")  # 含 tone_rules + 各类范例 + structure_template
+get_style("zimeiti")  # 含 tone_rules + structure_template 等规则
 list_styles();  FORBIDDEN_OPENINGS;  AI_JARGON
 
 # 工作区与导出 (from word_export import ...)
